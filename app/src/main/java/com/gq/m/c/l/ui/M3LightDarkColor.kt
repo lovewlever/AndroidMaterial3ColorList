@@ -21,12 +21,21 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.jvm.isAccessible
@@ -35,31 +44,41 @@ import kotlin.reflect.jvm.isAccessible
 fun M3LightDarkColorPreviewScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
 
-    val lightColors =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicLightColorScheme(context) else lightColorScheme()
-    val darkColors =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicDarkColorScheme(context) else darkColorScheme()
+    var lightColors by remember { mutableStateOf<ColorScheme?>(null) }
+    var darkColors by remember { mutableStateOf<ColorScheme?>(null) }
+    val lightColorPairs = remember { mutableStateListOf<Pair<String, Color>>() }
+    val darkColorPairs = remember { mutableStateListOf<Pair<String, Color>>() }
+
+    LaunchedEffect(true) {
+        launch(Dispatchers.IO) {
+            lightColors =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicLightColorScheme(context) else lightColorScheme()
+            darkColors =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicDarkColorScheme(context) else darkColorScheme()
+            lightColorPairs.addAll(extractColorPairs3(lightColors!!))
+            darkColorPairs.addAll(extractColorPairs3(darkColors!!))
+        }
+    }
 
     Column(modifier = modifier) {
         Row {
             Text("DynamicLightColor", modifier = Modifier.weight(1f))
             Text("DynamicDarkColor", modifier = Modifier.weight(1f))
         }
-        val lightColor = extractColorPairs3(lightColors)
-        val darkColor = extractColorPairs3(darkColors)
+
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(lightColor.size) { index ->
+            items(darkColorPairs.size) { index ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(40.dp)
                 ) {
-                    val lc = lightColor[index]
+                    val lc = lightColorPairs[index]
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .background(color = lightColors.background)
+                            .background(color = lightColors?.background ?: Color.Transparent)
                             .padding(vertical = 4.dp, horizontal = 4.dp)
                             .background(lc.second, shape = RoundedCornerShape(6.dp)),
                         contentAlignment = Alignment.CenterStart
@@ -73,12 +92,12 @@ fun M3LightDarkColorPreviewScreen(modifier: Modifier = Modifier) {
                         )
                     }
 
-                    val dc = darkColor[index]
+                    val dc = darkColorPairs[index]
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight()
-                            .background(color = darkColors.background)
+                            .background(color = darkColors?.background ?: Color.Transparent)
                             .padding(vertical = 4.dp, horizontal = 4.dp)
                             .background(dc.second, shape = RoundedCornerShape(6.dp)),
                         contentAlignment = Alignment.CenterStart
@@ -168,7 +187,7 @@ private fun extractColorPairs2(scheme: ColorScheme): List<Pair<String, Color>> {
     return pairList
 }
 
-private fun extractColorPairs3(scheme: ColorScheme): List<Pair<String, Color>> {
+private suspend fun extractColorPairs3(scheme: ColorScheme): List<Pair<String, Color>> = withContext(Dispatchers.IO) {
     val result = mutableListOf<Pair<String, Color>>()
     // 提取括号内内容
     val content = scheme.toString().substringAfter("ColorScheme(").substringBeforeLast(")")
@@ -182,10 +201,10 @@ private fun extractColorPairs3(scheme: ColorScheme): List<Pair<String, Color>> {
         val color = parseColorString(colorStr)
         result.add(key to color)
     }
-    return result
+    return@withContext result
 }
 
-private fun parseColorString(colorStr: String): Color {
+private suspend fun parseColorString(colorStr: String): Color = withContext(Dispatchers.IO) {
     val values = Regex("""Color\(([\d.,\s]+),\s*sRGB""")
         .find(colorStr)
         ?.groupValues
@@ -193,7 +212,7 @@ private fun parseColorString(colorStr: String): Color {
         ?.split(",")
         ?.map { it.trim().toFloat() }
 
-    return if (values != null && values.size == 4) {
+    return@withContext if (values != null && values.size == 4) {
         Color(values[0], values[1], values[2], values[3])
     } else {
         Color.Transparent

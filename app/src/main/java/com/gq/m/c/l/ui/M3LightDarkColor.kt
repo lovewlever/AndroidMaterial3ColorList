@@ -12,9 +12,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -33,6 +34,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.gq.m.c.l.ui.theme.darkScheme
+import com.gq.m.c.l.ui.theme.lightScheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,16 +52,21 @@ fun M3LightDarkColorPreviewScreen(modifier: Modifier = Modifier) {
     val lightColorPairs = remember { mutableStateListOf<Pair<String, Color>>() }
     val darkColorPairs = remember { mutableStateListOf<Pair<String, Color>>() }
 
+    var inputColor by remember { mutableStateOf("") }
+
     LaunchedEffect(true) {
         launch(Dispatchers.IO) {
             lightColors =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicLightColorScheme(context) else lightColorScheme()
+                /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicLightColorScheme(context) else */
+                lightScheme
             darkColors =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicDarkColorScheme(context) else darkColorScheme()
+                /*if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) dynamicDarkColorScheme(context) else */
+                darkScheme
             lightColorPairs.addAll(extractColorPairs3(lightColors!!))
             darkColorPairs.addAll(extractColorPairs3(darkColors!!))
         }
     }
+
 
     Column(modifier = modifier) {
         Row {
@@ -67,6 +75,17 @@ fun M3LightDarkColorPreviewScreen(modifier: Modifier = Modifier) {
         }
 
         LazyColumn(modifier = Modifier.weight(1f)) {
+            /*item {
+                Row {
+                    OutlinedTextField(value = inputColor, onValueChange = { inputColor = it }, modifier = Modifier.weight(1f))
+                    Button(onClick = {
+
+                    }) {
+                        Text(text = "Calculate")
+                    }
+                }
+
+            }*/
             items(darkColorPairs.size) { index ->
                 Row(
                     modifier = Modifier
